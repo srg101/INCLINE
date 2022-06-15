@@ -1,0 +1,114 @@
+---
+title: "Germination of alpine focal species - dataset vi"
+output: html_notebook
+author: "Sonya R. Geange"
+---
+
+```{r load_packages_data}
+library(readxl)
+library(osfr)
+library(dataDownloader)
+library(lubridate)
+library(tidyverse)
+library(ggpubr)
+
+# Get data from OSF Account
+
+# osf_auth(token = "add OSF PAT Token Here") 
+
+# Download 
+# get_file(node = "zhk3m",
+#          file = "SeedWIN Seedling Lab Data Cleaner.xlsx",
+#          path = "data/Germination_field_experiment",
+#          remote_path = "RawData/Germination_field_experiment")
+
+#### Load data ####
+
+# Read in excel dataset
+# Choose correct sheet and replace blanks in col names with "_"
+data <- read_excel("Data/Germination_field_experiment/SeedWIN Seedling Lab Data Cleaner.xlsx",
+                   sheet = "Data Sheet",
+                   .name_repair = function(x) gsub("\\s+", "_", x))
+
+# Read in identified errors
+known_errors <- read_excel("Data/Germination_field_experiment/SeedWIN Seedling Lab Data Cleaner.xlsx",
+                   sheet = "Errors",
+                   .name_repair = function(x) gsub("\\s+", "_", x))
+
+# Add errors as a 'flag' column for removal by users
+data <- left_join(data, known_errors,
+                  by = c("Code" = "To_be_checked"))
+```
+
+# Clean Dataset
+
+```{r}
+
+# What data types do we have?
+str(data)
+
+# Correct dataset elements
+seedling_traits <- data %>%
+  mutate(Block = as.character(Block)) %>% 
+  mutate(site = case_when(Site == "LAV" ~ "Lav",
+                          Site == "ULV" ~ "Ulv",
+                          Site == "GUD" ~ "Gud",
+                          Site == "SKJ" ~ "Skj")) %>%
+  mutate(siteID = case_when(Site == "LAV" ~ "Lavisdalen",
+                            Site == "ULV" ~ "Ulvehaugen",
+                            Site == "GUD" ~ "Gudmedalen",
+                            Site == "SKJ" ~ "Skjellingahaugen")) %>%
+  mutate(species = case_when(Species == "VA" ~ "Ver_alp",
+                          Species == "SP" ~ "Sib_pro")) %>%
+  mutate(OTC = case_when(Treatment == "OTC" ~ "W",
+                          Treatment == "C" ~ "C")) %>%
+  mutate(vegetation = case_when(Vegetation == "NoVeg" ~ "NoVeg",
+                          Vegetation == "Veg" ~ "Veg")) %>%
+  mutate(blockID = paste0(site, "_", Block)) %>% 
+  mutate(plot_seedling_ID = paste0(blockID, "_", OTC, "_", vegetation)) %>%
+  mutate(uniqueID = paste0(species, "_",
+                           blockID, "_", OTC, "_", vegetation, "_", Seed)) %>%
+  mutate(harvest_date = as.Date(Harvest_Date, format = "%d.%m.%Y")) %>% 
+  mutate(fresh_weighing_date = as.Date(Fresh_Weighing_Date,
+                                       format = "%d.%m.%Y")) %>% 
+  select(-c(Vegetation, Species, Site, site, Block,
+            Treatment, Vegetation, Seed, Do)) %>%
+  mutate(registrator = "AU, SRG, CZ") %>% 
+  rename(# Generic variables (cleaning, errors etc)
+         leaf_scanned_Y_N = `Leaf_Scan_Completed?_(Y/N)`,
+         balance_used = `Balance_L/Rb/Ra`,
+         speciesID_check = `Species_ID_Y/N`,
+         seed_check = `Check_Y/N`,
+         flagged_errors = Why,
+         comments = Comments,
+         # Biomass related attributes
+         weight_fresh_leaf = `Fresh_Leaf_Weight_(g)`,
+         weight_dry_leaf = `Dry_Leaf_Weight_(g)`,
+         weight_fresh_whole = `Whole_Fresh_Weight_(g)`,
+         weight_dry_whole = `Whole_Dry_Weight_(g)`,
+         weight_root = Root,
+         # Leaf/Seedling traits
+         shoot_height = `Shoot_height_(mm)`,
+         leaf_num = Number_of_leaves,
+         leaf_stalk_length = `Leaf_stalk_length_(mm)`,
+         leaf_length = `Leaf_length_(mm)`,
+         leaf_width = `Leaf_width_(mm)`) %>% 
+  select(species, siteID, blockID, OTC, vegetation,
+         plot_seedling_ID, uniqueID, registrator,
+         harvest_date, fresh_weighing_date, leaf_scanned_Y_N,
+         weight_fresh_leaf, weight_dry_leaf,
+         weight_fresh_whole, weight_dry_whole, weight_root,
+         shoot_height, leaf_num, leaf_stalk_length,
+         leaf_length, leaf_width,
+         balance_used, speciesID_check, seed_check, flagged_errors, comments)
+
+# Make long format
+seedling_traits_long <- seedling_traits %>% 
+  pivot_longer(cols = weight_fresh_leaf:leaf_width,
+               names_to = "trait", values_to = "values",
+               values_drop_na = TRUE)
+
+# Save file
+write_csv(seedling_traits_long, "/Data/Germination_field_experiment/cleaned/INCLINE_seedling_traits_alpine.csv")
+```
+
