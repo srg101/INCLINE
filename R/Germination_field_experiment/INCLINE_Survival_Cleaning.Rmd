@@ -1,0 +1,101 @@
+---
+title: "Germination of alpine focal species - dataset vi - Survival"
+output: html_notebook
+author: "Sonya R. Geange"
+---
+
+
+```{r load_packages_data}
+library(osfr)
+library(dataDownloader)
+library(lubridate)
+library(tidyverse)
+
+# Get data from OSF Account
+
+# osf_auth(token = "add OSF PAT Token Here") 
+
+# Download 
+# get_file(node = "zhk3m",
+#          file = "INCLINE_seedling_data.csv",
+#          path = "data/Germination_field_experiment",
+#          remote_path = "RawData/Germination_field_experiment")
+
+#### Load data ####
+
+# Read in dataset
+data <- read.csv2("Data/Germination_field_experiment/INCLINE_seedling_data.csv", header = TRUE)
+
+```
+
+
+
+# Clean Dataset
+
+```{r}
+
+# What data types do we have?
+str(data)
+
+# Correct dataset elements
+seedling_survival <- data %>%
+  rename(species = Species,
+         registrator = Registrator) %>% 
+  mutate(Block = as.character(Block)) %>% 
+  mutate(site = case_when(Site == "LAV" ~ "Lav",
+                          Site == "ULV" ~ "Ulv",
+                          Site == "GUD" ~ "Gud",
+                          Site == "SKJ" ~ "Skj")) %>%
+  mutate(siteID = case_when(Site == "LAV" ~ "Lavisdalen",
+                            Site == "ULV" ~ "Ulvehaugen",
+                            Site == "GUD" ~ "Gudmedalen",
+                            Site == "SKJ" ~ "Skjellingahaugen")) %>%
+  mutate(OTC = case_when(Warm_treatment == "W" ~ "W",
+                          Warm_treatment == "C" ~ "C")) %>%
+  mutate(vegetation = case_when(Vegetation == "no" ~ "NoVeg",
+                          Vegetation == "yes" ~ "Veg")) %>%
+  mutate(blockID = paste0(site, "_", Block)) %>% 
+  mutate(plot_seedling_ID = paste0(blockID, "_", OTC, "_", vegetation)) %>%
+  mutate(uniqueID = paste0(species, "_",
+                           blockID, "_", OTC, "_", vegetation, "_", ID)) %>%
+  mutate(date = as.Date(Date, format = "%d.%m.%Y")) %>%
+    mutate(campaign_number = if_else(date == "2020-06-29" | 
+                                     date == "2020-06-30" | 
+                                     date == "2020-07-13" | 
+                                     date == "2020-07-14" |
+                                     date == "2020-07-17", "first",
+           if_else(date == "2020-08-05" | date == "2020-08-07" |
+                   date == "2020-08-12" | date == "2020-08-13" |
+                   date == "2020-08-14", "second",
+           if_else(date == "2020-08-26" | date == "2020-08-24" |
+                   date == "2020-08-25" | date == "2020-08-27", "third",
+           if_else(date == "2021-06-07" | date == "2021-06-08" |
+                   date == "2021-06-09" | date == "2021-06-10" |
+                   date == "2021-06-11", "fourth", 
+           if_else(date == "2021-07-05" | date == "2021-07-06" |
+                   date == "2021-07-07" | date == "2021-07-08" |
+                   date == "2021-07-09" | date == "2021-07-12",
+                   "fifth",
+           if_else(date == "2021-08-02" | date == "2021-08-03" |
+                   date == "2021-08-04" | date == "2021-08-05" | 
+                   date == "2021-08-06", "sixth",
+           if_else(date == "2021-08-26" | date == "2021-08-27" |
+                   date == "2021-08-28" | date == "2021-08-29" ,"seventh",
+                   "NA")))))))) %>% 
+  rename(present = Present,
+         veg_height = Veg_height,
+         moss_depth = Moss_depth,
+         veg_cover = Veg_cover,
+         moss_cover = Moss_cover,
+         lichen_cover = Lichen_cover,
+         comments = Comment) %>% 
+  select(species, siteID, blockID, OTC, vegetation,
+         plot_seedling_ID, uniqueID, registrator,
+         date, campaign_number, 
+         X, Y, present, veg_height, moss_depth, veg_cover,
+         moss_cover, lichen_cover, comments)
+
+# Save file
+write_csv()
+```
+
