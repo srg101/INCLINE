@@ -63,9 +63,13 @@ seedling_survival <- data %>%
   mutate(vegetation = case_when(Vegetation == "no" ~ "NoVeg",
                           Vegetation == "yes" ~ "Veg")) %>%
   mutate(blockID = paste0(site, "_", Block)) %>% 
-  mutate(plot_seedling_ID = paste0(blockID, "_", OTC, "_", vegetation)) %>%
+  # Define if experiment is from the germination trial (E) or background demography monitoring (B)
+  mutate(experiment = ifelse(Plot == "OTC"|Plot == "C","E","B")) %>% 
+  mutate(plot_seedling_ID = paste0(blockID, "_", experiment, "_",
+                                   OTC, "_", vegetation)) %>%
   mutate(uniqueID = paste0(species, "_",
-                           blockID, "_", OTC, "_", vegetation, "_", ID)) %>%
+                           blockID, "_", experiment, "_",
+                           OTC, "_", vegetation, "_", ID)) %>%
   mutate(date = as.Date(Date, format = "%d.%m.%Y")) %>%
 # To fix: We have two rows where "2021-06-26" is found, but this doesn't correspond to any field trips planned that season. We assume it's a mistake and should be "2021-08-06" and therefore campaign 7.
     mutate(campaign_number = if_else(date == "2020-06-29" | 
@@ -101,15 +105,18 @@ seedling_survival <- data %>%
          moss_cover = Moss_cover,
          lichen_cover = Lichen_cover,
          comments = Comment) %>% 
-  select(species, siteID, blockID, OTC, vegetation,
+  select(species, siteID, blockID, experiment, OTC, vegetation,
          plot_seedling_ID, uniqueID, registrator,
          date, campaign_number, 
          X, Y, present, veg_height, moss_depth, veg_cover,
          moss_cover, lichen_cover, comments)
 
+
+# Plot: Number = background check for germination, non-number ? C, W = actual germination trial. Trial/Background.
+# Add to uniqueID as well. 
+
 # ISSUES: Still a work in process....
 # We have cases where there are multiple measures on 'present' for an individual for a given campaign.
-# i.e. "Sib_pro_Gud_1_W_NoVeg_1", however, there should only be one. Often this occurs where there is two or more registrators? So then did two people decide to enter the data..? 
 # Also, for each individual there is up to 7 campaigns where it could have been present, yet we do not have seven campaigns per individual.
 # Individuals may also be present in campaign 5, not in 6 and 'reappear' in 8.
 
@@ -122,11 +129,14 @@ seedling_survival_wide <- seedling_survival %>%
   names_from = campaign_number,
   values_from = present)
 
-# Issue solving
-dups <- seedling_survival %>% 
-  group_by(uniqueID, campaign_number, present) %>%
-  tally() %>% 
-  filter(n > 1)
+# Issues with multiple cell values:
+# "Ver_alp_Gud_2_E_W_NoVeg_1", "Ver_alp_Gud_2_E_W_NoVeg_2" and "Ver_alp_Gud_2_E_W_NoVeg_3": First campaign 2x dates 2020-06-30 (no) and 2020-07-17 (yes), but dates are spread apart. Same registrator (RG). All pres in all bar 1x1 campaign option.
+# "Ver_alp_Gud_4_E_W_Veg_5": Has 4 records for campaign 7, all same date 3x no, 1x yes, same registrator (CZ). Pres only in 2,3 and 1x7.
+# "Ver_alp_Gud_5_E_W_NoVeg_13": Has 2x campaign 2, one yes one no, same date and registrar (RG). Pres only in 1x2
+# "Ver_alp_Gud_5_E_W_NoVeg_16": Has 2x campaign 3, one yes one no, same date and registrar(RG)- Pres only in 2, 1x3, and 4.
+# "Ver_alp_Gud_5_E_W_Veg_2": Has 2x campaign 2, one yes one no, same date and registrar (RG). Pres only in 1x2 and 3.
+
+
 
 
 
