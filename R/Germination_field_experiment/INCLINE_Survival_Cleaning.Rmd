@@ -65,18 +65,19 @@ seedling_survival <- data %>%
   mutate(blockID = paste0(site, "_", Block)) %>% 
   # Define if experiment is from the germination trial (E) or background demography monitoring (B)
   mutate(experiment = ifelse(Plot == "OTC"|Plot == "C","E","B")) %>% 
-  mutate(plot_seedling_ID = paste0(blockID, "_", experiment, "_",
+  mutate(plotID = paste0(blockID, "_", experiment, "_",
                                    OTC, "_", vegetation)) %>%
   mutate(uniqueID = paste0(species, "_",
                            blockID, "_", experiment, "_",
                            OTC, "_", vegetation, "_", ID)) %>%
   mutate(date = as.Date(Date, format = "%d.%m.%Y")) %>%
 # To fix: We have two rows where "2021-06-26" is found, but this doesn't correspond to any field trips planned that season. We assume it's a mistake and should be "2021-08-06" and therefore campaign 7.
-    mutate(campaign_number = if_else(date == "2020-06-29" | 
-                                     date == "2020-06-30" | 
-                                     date == "2020-07-13" | 
-                                     date == "2020-07-14" |
-                                     date == "2020-07-17", "first",
+    mutate(campaign_number = 
+           if_else(date == "2020-06-29" | 
+                   date == "2020-06-30" | 
+                   date == "2020-07-13" | 
+                   date == "2020-07-14" |
+                   date == "2020-07-17", "first",
            if_else(date == "2020-08-05" | date == "2020-08-07" |
                    date == "2020-08-12" | date == "2020-08-13" |
                    date == "2020-08-14", "second",
@@ -98,6 +99,18 @@ seedling_survival <- data %>%
                    date == "2021-06-26",
                    "seventh",
                    "NA")))))))) %>% 
+  # Some Gudemedalen blocks/plots were not able to be sampled because of snow, so a trip zero is logged in June, with first trip then in July instead. 
+        mutate(campaign_number = if_else(PlotID == "G_2_C" & 
+                                           date == "2020-06-29", "zero",
+            if_else(PlotID == "G_2_C" & date == "2020-06-30", "zero",
+            if_else(PlotID == "G_2_C" & date == "2020-07-17", "first",
+            if_else(PlotID == "G_2_C" & date == "2020-08-13", "second",
+            if_else(PlotID == "G_2_C" & date == "2020-08-26", "third",
+            if_else(PlotID == "G_2_OTC" & date == "2020-06-29", "zero",
+            if_else(PlotID == "G_2_OTC" & date == "2020-06-30", "zero",
+            if_else(PlotID == "G_2_OTC" & date == "2020-07-17", "first",
+            if_else(PlotID == "G_2_OTC" & date == "2020-08-13", "second",
+            if_else(PlotID == "G_2_OTC" & date == "2020-08-26", "third", campaign_number))))))))))) %>% 
   rename(present = Present,
          veg_height = Veg_height,
          moss_depth = Moss_depth,
@@ -106,17 +119,13 @@ seedling_survival <- data %>%
          lichen_cover = Lichen_cover,
          comments = Comment) %>% 
   select(species, siteID, blockID, experiment, OTC, vegetation,
-         plot_seedling_ID, uniqueID, registrator,
+         plotID, uniqueID, registrator,
          date, campaign_number, 
          X, Y, present, veg_height, moss_depth, veg_cover,
          moss_cover, lichen_cover, comments)
 
-
-# Plot: Number = background check for germination, non-number ? C, W = actual germination trial. Trial/Background.
-# Add to uniqueID as well. 
-
-# ISSUES: Still a work in process....
-# We have cases where there are multiple measures on 'present' for an individual for a given campaign.
+# ISSUES: 
+# We have a couple of cases where there are multiple measures on 'present' for an individual for a given campaign.
 # Also, for each individual there is up to 7 campaigns where it could have been present, yet we do not have seven campaigns per individual.
 # Individuals may also be present in campaign 5, not in 6 and 'reappear' in 8.
 
@@ -127,20 +136,77 @@ seedling_survival_wide <- seedling_survival %>%
   pivot_wider(
   id_cols = uniqueID,
   names_from = campaign_number,
-  values_from = present)
+  values_from = present) %>% 
+  select(uniqueID, zero, first, second, third, fourth, fifth, sixth, seventh)
 
 # Issues with multiple cell values:
-# "Ver_alp_Gud_2_E_W_NoVeg_1", "Ver_alp_Gud_2_E_W_NoVeg_2" and "Ver_alp_Gud_2_E_W_NoVeg_3": First campaign 2x dates 2020-06-30 (no) and 2020-07-17 (yes), but dates are spread apart. Same registrator (RG). All pres in all bar 1x1 campaign option.
-# "Ver_alp_Gud_4_E_W_Veg_5": Has 4 records for campaign 7, all same date 3x no, 1x yes, same registrator (CZ). Pres only in 2,3 and 1x7.
-# "Ver_alp_Gud_5_E_W_NoVeg_13": Has 2x campaign 2, one yes one no, same date and registrar (RG). Pres only in 1x2
-# "Ver_alp_Gud_5_E_W_NoVeg_16": Has 2x campaign 3, one yes one no, same date and registrar(RG)- Pres only in 2, 1x3, and 4.
-# "Ver_alp_Gud_5_E_W_Veg_2": Has 2x campaign 2, one yes one no, same date and registrar (RG). Pres only in 1x2 and 3.
+# We still have "Ver_alp_Gud_5_E_W_NoVeg_16": This has 2 times campaign 3 records, one yes one no, same date and registrar (you)- It is considered present only in  campaign 2, in one of the two records for campaign 3 and also in campaign 4. Looking at raw data should be 'yes' campaign three. 
+seedling_survival <- seedling_survival %>% 
+  mutate(present = ifelse(uniqueID == "Ver_alp_Gud_5_E_W_NoVeg_16" & 
+                            campaign_number == "third","yes", present))
 
+# Check again
+seedling_survival_wide <- seedling_survival %>% 
+  select(uniqueID, campaign_number, present) %>%
+  distinct() %>% 
+  pivot_wider(
+  id_cols = uniqueID,
+  names_from = campaign_number,
+  values_from = present) %>% 
+  select(uniqueID, zero, first, second, third, fourth, fifth, sixth, seventh)
 
+# Clean blanks - assume = no
+seedling_survival_wide <- seedling_survival_wide %>% 
+  replace_na(list(zero = "no", first = "no", second = "no",
+                  third = "no", fourth = "no", fifth = "no",
+                  sixth = "no", seventh = "no"))
 
+# Back to long format
+seedling_survival_long <- seedling_survival_wide %>% 
+  pivot_longer(!uniqueID,
+               names_to = "campaign_number",
+               values_to = "present")
 
+# Merge with full data set for meta-data
+seedling_data_sub <- seedling_survival %>%
+  select(-c(present))
+full_data <- left_join(seedling_survival_long,seedling_data_sub,
+                        by = c("uniqueID" = "uniqueID",
+                               "campaign_number" = "campaign_number"))
 
+# Backfill meta-data columns relating to site, block, plot etc
+full_data <- full_data %>% 
+  group_by(uniqueID, ) %>% 
+  fill(species:plotID, .direction = "downup") %>% 
+  ungroup()
+
+# Copy veg heigh, moss cover etc data for a given year
+# First create year col
+full_data$year <- NA
+full_data <- full_data %>% 
+  mutate(year = ifelse(campaign_number == "zero" |
+                         campaign_number == "first" |
+                         campaign_number == "second" |
+                         campaign_number == "third", "2020", "2021")) %>% 
+  group_by(plotID, year) %>% 
+  fill(veg_height:lichen_cover, .direction = "downup") %>% 
+  ungroup()
+
+# Backfill campaign dates
+full_data <- full_data %>% 
+  group_by(blockID, campaign_number) %>% 
+  fill(date, .direction = "downup") %>% 
+  ungroup()
+
+# Order data and remove cols
+full_data <- full_data %>% 
+  select(uniqueID, species, siteID, blockID, experiment, OTC, vegetation, plotID,
+         registrator, date, campaign_number, X, Y, present,
+         veg_height, moss_depth, veg_cover, moss_cover, lichen_cover,
+         comments)
+  
 # Save file
-write_csv()
+write.csv(full_data, "Data/Germination_field_experiment/cleaned/INCLINE_seedling_data.csv")
+
 ```
 
