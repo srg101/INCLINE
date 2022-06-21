@@ -112,17 +112,17 @@ seedling_survival <- data %>%
             if_else(PlotID == "G_2_OTC" & date == "2020-08-13", "second",
             if_else(PlotID == "G_2_OTC" & date == "2020-08-26", "third", campaign_number))))))))))) %>% 
   rename(present = Present,
-         veg_height = Veg_height,
-         moss_depth = Moss_depth,
-         veg_cover = Veg_cover,
-         moss_cover = Moss_cover,
-         lichen_cover = Lichen_cover,
+         vegetation_height = Veg_height,
+         bryophyte_depth = Moss_depth,
+         vegetation_cover = Veg_cover,
+         bryophyte_cover = Moss_cover,
+         lichen = Lichen_cover,
          comments = Comment) %>% 
   select(species, siteID, blockID, experiment, OTC, vegetation,
          plotID, uniqueID, registrator,
          date, campaign_number, 
-         X, Y, present, veg_height, moss_depth, veg_cover,
-         moss_cover, lichen_cover, comments)
+         X, Y, present, vegetation_height, bryophyte_depth, vegetation_cover,
+         bryophyte_cover, lichen, comments)
 
 # ISSUES: 
 # We have a couple of cases where there are multiple measures on 'present' for an individual for a given campaign.
@@ -189,7 +189,7 @@ full_data <- full_data %>%
                          campaign_number == "second" |
                          campaign_number == "third", "2020", "2021")) %>% 
   group_by(plotID, year) %>% 
-  fill(veg_height:lichen_cover, .direction = "downup") %>% 
+  fill(vegetation_height:lichen, .direction = "downup") %>% 
   ungroup()
 
 # Backfill campaign dates
@@ -202,7 +202,8 @@ full_data <- full_data %>%
 full_data <- full_data %>% 
   select(uniqueID, species, siteID, blockID, experiment, OTC, vegetation, plotID,
          registrator, date, campaign_number, X, Y, present,
-         veg_height, moss_depth, veg_cover, moss_cover, lichen_cover,
+         vegetation_height, bryophyte_depth, vegetation_cover,
+         bryophyte_cover, lichen,
          comments)
   
 # Save file
