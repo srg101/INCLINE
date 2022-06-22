@@ -116,13 +116,13 @@ seedling_survival <- data %>%
          bryophyte_depth = Moss_depth,
          vegetation_cover = Veg_cover,
          bryophyte_cover = Moss_cover,
-         lichen = Lichen_cover,
+         lichen_cover = Lichen_cover,
          comments = Comment) %>% 
   select(species, siteID, blockID, experiment, OTC, vegetation,
          plotID, uniqueID, registrator,
          date, campaign_number, 
          X, Y, present, vegetation_height, bryophyte_depth, vegetation_cover,
-         bryophyte_cover, lichen, comments)
+         bryophyte_cover, lichen_cover, comments)
 
 # ISSUES: 
 # We have a couple of cases where there are multiple measures on 'present' for an individual for a given campaign.
@@ -189,7 +189,7 @@ full_data <- full_data %>%
                          campaign_number == "second" |
                          campaign_number == "third", "2020", "2021")) %>% 
   group_by(plotID, year) %>% 
-  fill(vegetation_height:lichen, .direction = "downup") %>% 
+  fill(vegetation_height:lichen_cover, .direction = "downup") %>% 
   ungroup()
 
 # Backfill campaign dates
@@ -203,7 +203,7 @@ full_data <- full_data %>%
   select(uniqueID, species, siteID, blockID, experiment, OTC, vegetation, plotID,
          registrator, date, campaign_number, X, Y, present,
          vegetation_height, bryophyte_depth, vegetation_cover,
-         bryophyte_cover, lichen,
+         bryophyte_cover, lichen_cover,
          comments)
   
 # Save file
