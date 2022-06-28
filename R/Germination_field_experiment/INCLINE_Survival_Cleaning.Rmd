@@ -207,7 +207,7 @@ full_data <- full_data %>%
          comments)
   
 # Save file
-write.csv(full_data, "Data/Germination_field_experiment/cleaned/INCLINE_seedling_data.csv")
+write.csv(full_data, "Data/Germination_field_experiment/cleaned/INCLINE_seedling_data.csv", row.names = FALSE)
 
 ```
 
