@@ -100,7 +100,7 @@ seedling_traits <- data %>%
          weight_fresh_whole, weight_dry_whole, weight_root,
          shoot_height, leaf_num, leaf_stalk_length,
          leaf_length, leaf_width,
-         balance_used, speciesID_check, seed_check, flagged_errors, comments)
+         balance_used, speciesID_check, flagged_errors, comments)
 
 # Make long format
 seedling_traits_long <- seedling_traits %>% 
